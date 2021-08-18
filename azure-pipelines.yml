@@ -1,5 +1,5 @@
 trigger:
-- master
+- main
 
 pool:
   vmImage: 'windows-latest'
@@ -7,7 +7,7 @@ pool:
 steps:
 
 - task: PowerShell@2
-  displayName: 'Install SkypeOnlineConnector'
+  displayName: 'Install MicrosoftTeams Module'
   inputs:
     targetType: 'inline'
     script: |
