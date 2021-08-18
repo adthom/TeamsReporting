@@ -12,16 +12,9 @@ function FindMatchingStrings {
     param (
         $Content,
         $OpenString,
-        $CloseString,
-        $Insensitive = $true
+        $CloseString
     )
-    if ($Insensitive) {
-        $lContent = $Content.ToLower()
-        $OpenString = $OpenString.ToLower()
-        $CloseString = $CloseString.ToLower()
-    } else {
-        $lContent = $Content
-    }
+    $lContent = $Content
     if (($openIndex = $lContent.IndexOf($OpenString)) -ge 0) {
         $cursor = 1
         $nextopen = $openIndex
@@ -54,10 +47,7 @@ function FindMatchingStrings {
 # import getUsedLocalFunctions function
 . .\GetUsedLocalFunctions.ps1
 
-$Disclaimer = '# (c)2021 Microsoft Corporation.  All rights reserved. This document is provided "as-is." Information and views expressed in this document,
-# including URL and other Internet Web site references, may change without notice. You bear the risk of using it. 
-# This document does not provide you with any legal rights to any intellectual property in any Microsoft product.
-# You may copy and use this document for your internal, reference purposes. You may modify this document for your internal purposes'
+$Disclaimer = @(Get-Content -Path .\disclaimer.txt | ForEach-Object { "# {0}" -f $_ }) -join "$([Environment]::NewLine)"
 
 # Get Project Root Folder
 $ProjectRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -132,7 +122,6 @@ foreach ($file in $Publics) {
         $modifiedContent = $content.Trim()
     }
 
-
     if (($first = $modifiedContent.ToLower().IndexOf('[cmdletbinding')) -ge 0) {
         $sub = $modifiedContent.Substring($first)
         $CmdletBindingText = FindMatchingStrings -Content $sub -OpenString "[" -CloseString "]"
@@ -145,7 +134,7 @@ foreach ($file in $Publics) {
     if (($first = $modifiedContent.ToLower().IndexOf('param')) -ge 0) {
         $first = $first + 5
         $sub = $modifiedContent.Substring($first)
-        $params = FindMatchingStrings -Content $sub -OpenString "(" -CloseString ")" -Insensitive $false
+        $params = FindMatchingStrings -Content $sub -OpenString "(" -CloseString ")"
         $modifiedContent = $modifiedContent.Replace("param", "").Trim()
         $modifiedContent = $modifiedContent.Replace($params, "").Trim()
         $params = "param " + $params
