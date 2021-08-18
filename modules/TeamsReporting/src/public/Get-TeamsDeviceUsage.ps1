@@ -5,6 +5,7 @@ function Get-TeamsDeviceUsage {
         [int]
         $TimePeriod = 7,
         
+        [Parameter(DontShow = $true)]
         [string]
         $NextCursor,
 

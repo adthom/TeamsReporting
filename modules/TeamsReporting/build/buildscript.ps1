@@ -44,10 +44,7 @@ function FindMatchingStrings {
     }
 }
 
-# import getUsedLocalFunctions function
-. .\GetUsedLocalFunctions.ps1
-
-$Disclaimer = @(Get-Content -Path .\disclaimer.txt | ForEach-Object { "# {0}" -f $_ }) -join "$([Environment]::NewLine)"
+$Disclaimer = @(Get-Content -Path "${PSScriptRoot}\disclaimer.txt" | ForEach-Object { "# {0}" -f $_ }) -join "$([Environment]::NewLine)"
 
 # Get Project Root Folder
 $ProjectRoot = Split-Path -Path $PSScriptRoot -Parent
@@ -99,6 +96,12 @@ foreach ($import in @($Publics + $Privates)) {
     }
 }
 
+# import getUsedLocalFunctions function
+$GetUsedLocalFunc = Get-ChildItem -Path Function:GetUsedLocalFunctions -ErrorAction SilentlyContinue
+if ($null -eq $GetUsedLocalFunc) {
+    . "${PSScriptRoot}\GetUsedLocalFunctions.ps1"
+}
+
 foreach ($file in $Publics) {
     $FunctionName = [IO.Path]::GetFileNameWithoutExtension($file.Name)
     $Function = Get-ChildItem -Path "Function:$FunctionName" -ErrorAction SilentlyContinue
@@ -109,7 +112,7 @@ foreach ($file in $Publics) {
     } else {
         Write-Host "Building Script for $FunctionName"
     }
-    $UsedFunctionStrings = GetUsedLocalFunctions -Script $ScriptBlock
+    $UsedFunctionStrings = GetUsedLocalFunctions -Script $ScriptBlock -Functions $null -GetStrings $true
 
     $content = $Function.Definition
     
