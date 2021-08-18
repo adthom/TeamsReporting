@@ -1,0 +1,63 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+
+- task: PowerShell@2
+  displayName: 'Install SkypeOnlineConnector'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Install-Module -Name MicrosoftTeams -Scope CurrentUser -RequiredVersion 2.5.0
+
+- task: PowerShell@2
+  displayName: 'Build Module'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Import-Module -Name MicrosoftTeams -RequiredVersion 2.5.0
+      . "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/modules/TeamsReporting/build/build.ps1"
+
+- task: PowerShell@2
+  displayName: 'Build Scripts'
+  inputs:
+    targetType: 'inline'
+    script: |
+      Import-Module -Name MicrosoftTeams -RequiredVersion 2.5.0
+      . "$($env:SYSTEM_DEFAULTWORKINGDIRECTORY)/modules/TeamsReporting/build/buildscript.ps1"
+
+- task: CopyFiles@2
+  displayName: 'Copy Module to Staging'
+  inputs:
+    SourceFolder: '$(System.DefaultWorkingDirectory)/modules/TeamsReporting/release'
+    Contents: '**/!(Scripts)/**'
+    TargetFolder: '$(build.artifactstagingdirectory)/module'
+    CleanTargetFolder: true
+    OverWrite: true
+
+- task: CopyFiles@2
+  displayName: 'Copy Scripts to Staging'
+  inputs:
+    SourceFolder: '$(System.DefaultWorkingDirectory)/modules/TeamsReporting/release/Scripts'
+    Contents: '*'
+    TargetFolder: '$(build.artifactstagingdirectory)/scripts'
+    CleanTargetFolder: true
+    OverWrite: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Module'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/module'
+    ArtifactName: 'TeamsReportingModuleRelease'
+    publishLocation: 'Container'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Scripts'
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)/scripts'
+    ArtifactName: 'TeamsReportingScriptsRelease'
+    publishLocation: 'Container'
+    
