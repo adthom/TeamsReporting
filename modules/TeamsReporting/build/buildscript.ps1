@@ -183,6 +183,8 @@ foreach ($file in $Publics) {
         $scriptArray += $functionText
     }
     $compiledScript = $scriptArray -join "$([Environment]::NewLine)$([Environment]::NewLine)"
+    $nlr = [Regex]::Escape([Environment]::NewLine)
+    $compiledScript = $compiledScript -replace "$nlr{3,}", "$([Environment]::NewLine)$([Environment]::NewLine)"
 
     if (!(Test-Path -Path $releasePath)) {
         New-Item -Path $releasePath -ItemType Directory | Out-Null

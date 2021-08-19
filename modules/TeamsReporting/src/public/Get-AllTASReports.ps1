@@ -3,6 +3,16 @@ function Get-AllTASReports {
         $Path = $PWD,
         $TimePeriod = 90
     )
+    
+    # Keep this comment block to allow the script builder to add references
+    # Get-TeamsUserActivityTenantSummary
+    # Get-TeamsUserActivity
+    # Get-TeamsUsageTenantSummary
+    # Get-TeamsUsage
+    # Get-TeamsDeviceUsageTenantSummary
+    # Get-TeamsDeviceUsage
+    # Get-AppsUsageTenantSummary
+    # Get-AppsUsage
 
     $Reports = @(
         "TeamsUserActivityTenantSummary"

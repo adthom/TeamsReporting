@@ -28,6 +28,9 @@ function Get-ConfigAPICalls {
             $StartString = $StartDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
             $Uri += "callStart+ge+" + [Uri]::EscapeDataString($StartString)
         }
+        if ($StartDate -and $EndDate) {
+            $Uri += "+and+"
+        }
         if ($EndDate) {
             $EndString = $EndDate.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
             $Uri += "callStart+le+" + [Uri]::EscapeDataString($EndString)
