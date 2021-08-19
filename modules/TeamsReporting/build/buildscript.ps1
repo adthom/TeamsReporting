@@ -138,10 +138,13 @@ foreach ($file in $Publics) {
         $first = $first + 5
         $sub = $modifiedContent.Substring($first)
         $params = FindMatchingStrings -Content $sub -OpenString "(" -CloseString ")"
-        $modifiedContent = $modifiedContent.Replace("param", "").Trim()
-        $modifiedContent = $modifiedContent.Replace($params, "").Trim()
-        $params = "param " + $params
-        $params = $params.Trim()
+        $paramPattern = "param\s*" + [Regex]::Escape($params)
+        if ($modifiedContent -match $paramPattern) {
+            $params = $Matches[0]
+            $modifiedContent = $modifiedContent.Replace($params, "").Trim()
+        } else {
+            Write-Warning "$params does not match $modifiedContent"
+        }
     } else {
         $params = ""
     }
