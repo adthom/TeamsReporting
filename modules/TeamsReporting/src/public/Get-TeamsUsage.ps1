@@ -4,10 +4,6 @@ function Get-TeamsUsage {
         [ValidateSet(7, 30, 90)]
         [int]
         $TimePeriod = 7,
-        
-        [Parameter(DontShow = $true)]
-        [string]
-        $NextCursor,
 
         [switch]
         $IncludeDaily
@@ -15,7 +11,7 @@ function Get-TeamsUsage {
     $Key = "TUR_T"
     $Route = "/teams/summary-timeseries"
     $PSBoundParameters['TimePeriod'] = $TimePeriod
-    $Results = Get-TASReport -Key $Key -Route $Route -Paginated -Command $MyInvocation.MyCommand.Name @PSBoundParameters
+    $Results = Get-TASReport -Key $Key -Route $Route -Paginated @PSBoundParameters
     if ($IncludeDaily) {
         $Results | Sort-Object -Property DisplayName, Date
     } else {

@@ -191,3 +191,7 @@ foreach ($file in $Publics) {
     }
     Set-Content -Path ([IO.Path]::Combine($releasePath, $file.Name)) -Value $compiledScript
 }
+
+# create Zip Package
+$Scripts = Get-ChildItem -Path $releasePath -Filter *.ps1 | Select-Object -ExpandProperty FullName
+Compress-Archive -Path $Scripts -DestinationPath ([IO.Path]::Combine($releasePath, "Scripts.zip")) -CompressionLevel Optimal -Force

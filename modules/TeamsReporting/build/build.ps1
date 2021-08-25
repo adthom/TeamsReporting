@@ -23,6 +23,7 @@ $ModuleName = Split-Path -Path $ProjectRoot -Leaf
 # Setup Path/File Variables for use in build
 $srcPath = [IO.Path]::Combine($ProjectRoot, "src")
 $releasePath = [IO.Path]::Combine($ProjectRoot, "release", $ModuleName)
+$zipPath = [IO.Path]::Combine($ProjectRoot, "release")
 $moduleFile = "${releasePath}\${ModuleName}.psm1"
 $moduleManifestFile = "${releasePath}\${ModuleName}.psd1"
 $srcModuleManifest = "${srcPath}\${ModuleName}.psd1"
@@ -150,3 +151,6 @@ foreach ($import in @($Public)) {
 # Create new module manifest with our inputs
 
 New-ModuleManifest @NewModuleManifestParams
+
+$Files = Get-ChildItem -Path $releasePath | Select-Object -ExpandProperty FullName
+Compress-Archive -Path $Files -DestinationPath ([IO.Path]::Combine($zipPath, "Module.zip")) -CompressionLevel Optimal -Force
