@@ -102,6 +102,9 @@ if ($null -eq $GetUsedLocalFunc) {
     . "${PSScriptRoot}\GetUsedLocalFunctions.ps1"
 }
 
+# cleanup old builds
+Get-ChildItem -Path $releasePath -Filter *.ps1 | Remove-Item -Force -ErrorAction SilentlyContinue
+
 foreach ($file in $Publics) {
     $FunctionName = [IO.Path]::GetFileNameWithoutExtension($file.Name)
     $Function = Get-ChildItem -Path "Function:$FunctionName" -ErrorAction SilentlyContinue
