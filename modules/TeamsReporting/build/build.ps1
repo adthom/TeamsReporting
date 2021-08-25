@@ -5,7 +5,13 @@
 
     [int]
     [ValidateRange(0, [int]::MaxValue)]
-    $MinorVersion
+    $MinorVersion,
+
+    [string]
+    $Company,
+
+    [string]
+    $Author
 )
 
 # Get Project Root Folder
@@ -17,18 +23,12 @@ $ModuleName = Split-Path -Path $ProjectRoot -Leaf
 # Setup Path/File Variables for use in build
 $srcPath = [IO.Path]::Combine($ProjectRoot, "src")
 $releasePath = [IO.Path]::Combine($ProjectRoot, "release", $ModuleName)
+$zipPath = [IO.Path]::Combine($ProjectRoot, "release")
 $moduleFile = "${releasePath}\${ModuleName}.psm1"
 $moduleManifestFile = "${releasePath}\${ModuleName}.psd1"
 $srcModuleManifest = "${srcPath}\${ModuleName}.psd1"
 
-$ModuleManifestString = (Get-Content -Path $srcModuleManifest | 
-        Where-Object { $_ -notmatch '^\s*#' } | 
-        ForEach-Object { $_ -replace '#.+$', '' } | 
-        Where-Object { $_ -ne [string]::Empty }
-) -join [Environment]::NewLine
-if ( -not [string]::IsNullOrWhiteSpace($ModuleManifestString) ) {
-    $ModuleManifest = Invoke-Expression -Command $ModuleManifestString
-}
+$ModuleManifest = Import-PowerShellDataFile -Path $srcModuleManifest
 
 if (($MajorVersion + $MinorVersion) -eq 0 -and $null -ne $ModuleManifest['ModuleVersion']) {
     $MajorVersion = [int]($ModuleManifest['ModuleVersion'] -split '\.')[0]
@@ -44,8 +44,8 @@ if (($MajorVersion + $MinorVersion) -eq 0 -and $null -ne $ModuleManifest['Module
     }
     if ( $CurrentBuildNumber -ne $BuildNumber ) {
         $Revision = 1
-    } else
-    {
+    }
+    else {
         $Revision++
     }
 }
@@ -69,6 +69,7 @@ $NewModuleManifestParams = @{
     FunctionsToExport = $FunctionsToExport
     ModuleVersion     = $Version
     CompanyName       = $Company
+    Author            = $Author
 }
 
 if ( [string]::IsNullOrEmpty($Company) -and $ModuleManifest['CompanyName'].ToLower() -ne "unknown" ) {
@@ -150,3 +151,6 @@ foreach ($import in @($Public)) {
 # Create new module manifest with our inputs
 
 New-ModuleManifest @NewModuleManifestParams
+
+$Files = Get-ChildItem -Path $releasePath | Select-Object -ExpandProperty FullName
+Compress-Archive -Path $Files -DestinationPath ([IO.Path]::Combine($zipPath, "Module.zip")) -CompressionLevel Optimal -Force

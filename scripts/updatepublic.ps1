@@ -1,9 +1,11 @@
 $BasePath = $PSScriptRoot
+$SourceModuleName = "TeamsReporting"
+$DestinationModuleName = "TeamsReporting"
 $RootFolder = Split-Path $BasePath -Parent
 $RepoFolder = Split-Path $RootFolder -Parent
-$SourcePath = Join-Path -Path $RootFolder -ChildPath "modules\TeamsReporting\release\Scripts"
-$DestinationPath = Join-Path -Path $RepoFolder -ChildPath "TeamsAdminSamples\PowerShell\TeamsReporting"
-$DisclaimerPath = Join-Path -Path $RootFolder -ChildPath "modules\TeamsReporting\build\disclaimer.txt"
+$SourcePath = Join-Path -Path $RootFolder -ChildPath "modules\${SourceModuleName}\release\Scripts"
+$DestinationPath = Join-Path -Path $RepoFolder -ChildPath "TeamsAdminSamples\PowerShell\${DestinationModuleName}"
+$DisclaimerPath = Join-Path -Path $RootFolder -ChildPath "modules\${SourceModuleName}\build\disclaimer.txt"
 $DisclaimerLength = @(Get-Content -Path $DisclaimerPath).Count
 if ($null -ne $DisclaimerLength -and $DisclaimerLength -gt 0) {
     $DisclaimerLength++
