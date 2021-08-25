@@ -20,11 +20,11 @@ function Export-TeamsLiveEvents {
         $EventReport = [PSCustomObject]@{
             Subject                    = $Event.subject
             Organizer                  = $Event.participants.organizer.upn
-            ScheduledStart             = [datetime]$Event.startTime
-            ScheduledEnd               = [datetime]$Event.endTime
-            EventStart                 = [datetime]$Event.extensionData.streamStartTime
-            EventEnd                   = [datetime]$Event.extensionData.streamEndTime
-            InternalMeetingFirstJoined = [datetime]$Event.extensionData.firstJoinTime
+            ScheduledStart             = if ($null -ne $Event.startTime) { [datetime]$Event.startTime } else { $null }
+            ScheduledEnd               = if ($null -ne $Event.endTime) { [datetime]$Event.endTime } else { $null }
+            EventStart                 = if ($null -ne $Event.extensionData.streamStartTime) { [datetime]$Event.extensionData.streamStartTime } else { $null }
+            EventEnd                   = if ($null -ne $Event.extensionData.streamEndTime) { [datetime]$Event.extensionData.streamEndTime } else { $null }
+            InternalMeetingFirstJoined = if ($null -ne $Event.extensionData.firstJoinTime) { [datetime]$Event.extensionData.firstJoinTime } else { $null }
             Views                      = $Event.extensionData.broadcastResources.SessionCount
             Producers                  = $Event.participants.producers.Count
             Presenters                 = $Event.participants.contributors.Count + $Event.participants.presenters.Count
@@ -60,7 +60,7 @@ function Export-TeamsLiveEvents {
                 }
             }
             $EventReport.ExportedResourcePath = $EventPath
-
+    
             if (!$Event.extensionData.broadcastResources.IsDeleted -and [datetime]::Now -lt [datetime]$Event.extensionData.broadcastResources.Expiry) {
                 if (!(Test-Path -Path $EventReport.ExportedResourcePath)) {
                     New-Item -Path $EventReport.ExportedResourcePath -ItemType Directory | Out-Null
@@ -86,7 +86,7 @@ function Export-TeamsLiveEvents {
         $ReportAppend += "_" + ($OrganizerId -replace $InvalidPattern, '_')
     }
     $SummaryPath = [IO.Path]::Combine($Path, "TeamsLiveEventReport_${ReportAppend}.csv")
-
+    
     if ((Test-Path -Path $SummaryPath)) {
         $iterator = 0
         $ReportAppend += ("_{0:D2}" -f $iterator)
@@ -97,6 +97,9 @@ function Export-TeamsLiveEvents {
             $PathInUse = Test-Path -Path $SummaryPath
         } while ($PathInUse)
     }
-    $Reports | Export-Csv -Path $SummaryPath -NoTypeInformation
-    Write-Host "Report Summary saved to $SummaryPath"
+    $Reports = $Reports | Where-Object { $null -ne $_ }
+    if ($Reports.Count -gt 0) {
+        $Reports | Export-Csv -Path $SummaryPath -NoTypeInformation
+        Write-Host "Report Summary saved to $SummaryPath"
+    }    
 }
