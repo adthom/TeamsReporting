@@ -37,7 +37,11 @@ function Export-TeamsLiveEvents {
                 $EventReport.Subject
             }
             else {
-                $Start = $EventReport.ScheduledStart.ToString('u')
+                $Start = if ($null -eq $EventReport.ScheduledStart) {
+                    $null
+                } else {
+                    $EventReport.ScheduledStart.ToString('u')
+                }
                 Write-Host "organized by" $EventReport.Organizer "on" $Start
                 @($EventReport.Organizer, $Start) -join "_"
             }
@@ -60,8 +64,12 @@ function Export-TeamsLiveEvents {
                 }
             }
             $EventReport.ExportedResourcePath = $EventPath
-    
-            if (!$Event.extensionData.broadcastResources.IsDeleted -and [datetime]::Now -lt [datetime]$Event.extensionData.broadcastResources.Expiry) {
+            $Expired = if ($null -ne $Event.extensionData.broadcastResources.Expiry) {
+                [datetime]::Now -ge [datetime]$Event.extensionData.broadcastResources.Expiry
+            } else {
+                $false
+            }
+            if (!$Event.extensionData.broadcastResources.IsDeleted -and !$Expired) {
                 if (!(Test-Path -Path $EventReport.ExportedResourcePath)) {
                     New-Item -Path $EventReport.ExportedResourcePath -ItemType Directory | Out-Null
                 }
@@ -80,8 +88,12 @@ function Export-TeamsLiveEvents {
         $EventReport
     }
     $ReportAppend = ""
-    $ReportAppend += $StartTime.ToString('yyyy_MM_dd') -replace $InvalidPattern, '_'
-    $ReportAppend += "_" + ($EndTime.ToString('yyyy_MM_dd') -replace $InvalidPattern, '_')
+    if ($null -ne $StartTime) {
+        $ReportAppend += $StartTime.ToString('yyyy_MM_dd') -replace $InvalidPattern, '_'
+    }
+    if ($null -ne $EndTime) {
+        $ReportAppend += "_" + ($EndTime.ToString('yyyy_MM_dd') -replace $InvalidPattern, '_')
+    }
     if (![string]::IsNullOrEmpty($OrganizerId)) {
         $ReportAppend += "_" + ($OrganizerId -replace $InvalidPattern, '_')
     }
@@ -101,5 +113,5 @@ function Export-TeamsLiveEvents {
     if ($Reports.Count -gt 0) {
         $Reports | Export-Csv -Path $SummaryPath -NoTypeInformation
         Write-Host "Report Summary saved to $SummaryPath"
-    }    
+    }
 }
