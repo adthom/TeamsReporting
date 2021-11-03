@@ -2,9 +2,11 @@ function ParseResults {
     [CmdletBinding()]
     param (
         $Item,
+
         [System.Collections.Specialized.OrderedDictionary]
         $Result
     )
+
     $RootProperties = $Item | Get-Member -MemberType NoteProperty | Select-Object -ExpandProperty Name
     $RootPropName = $null
     foreach ($Prop in $RootProperties) {
@@ -30,7 +32,6 @@ function ParseResults {
     else {
         $ItemMetrics = $Item.$RootPropName
     }
-
     $DailyResult = $false
     if ($ItemMetrics) {
         $Daily = @{}
@@ -42,7 +43,6 @@ function ParseResults {
             $mArray = $Metric.ToCharArray()
             $mArray[0] = [char]::ToUpper($mArray[0])
             $Metric = [string]::new($mArray)
-
             if ($null -ne $ItemMetrics.$Metric.timeSeries) {
                 foreach ($day in $ItemMetrics.$Metric.timeSeries) {
                     if ($null -eq $day) {
@@ -84,3 +84,4 @@ function ParseResults {
         [PSCustomObject]$Result
     }
 }
+

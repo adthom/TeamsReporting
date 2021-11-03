@@ -8,13 +8,15 @@ function Get-AppsUsage {
         [switch]
         $IncludeDaily
     )
+
     $Key = "AUR_T"
     $Route = "/apps/summary-timeseries"
     $PSBoundParameters['TimePeriod'] = $TimePeriod
     $Results = Get-TASReport -Key $Key -Route $Route -Paginated @PSBoundParameters
     if ($IncludeDaily) {
         $Results | Sort-Object -Property Name, Date
-    } else {
+    }
+    else {
         $Results
     }
 }

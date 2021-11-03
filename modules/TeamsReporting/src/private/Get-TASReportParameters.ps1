@@ -3,6 +3,7 @@ function Get-TASReportParameters {
     param (
         $Key
     )
+
     $Report = @{
         Key = $Key
     }
@@ -20,3 +21,4 @@ function Get-TASReportParameters {
     }
     [PSCustomObject]$Report
 }
+

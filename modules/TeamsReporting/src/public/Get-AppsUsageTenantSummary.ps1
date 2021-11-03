@@ -14,7 +14,9 @@ function Get-AppsUsageTenantSummary {
     $Results = Get-TASReport -Key $Key -Route $Route @PSBoundParameters
     if ($IncludeDaily) {
         $Results | Sort-Object -Property DisplayName, Date
-    } else {
+    }
+    else {
         $Results
     }
 }
+

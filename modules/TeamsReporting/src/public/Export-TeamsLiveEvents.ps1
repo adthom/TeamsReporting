@@ -1,18 +1,21 @@
 function Export-TeamsLiveEvents {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "Path")]
+    [CmdletBinding()]
     param (
         [datetime]
         $StartTime,
-        
+
         [datetime]
         $EndTime,
 
         $OrganizerId,
-        
+
         $Path = $PWD,
 
         [switch]
         $DownloadResources
     )
+
     $LiveEvents = Get-TeamsLiveEventReport -StartTime $StartTime -EndTime $EndTime -OrganizerId $OrganizerId
     $Resources = @("QnaReport", "AttendeeReport", "Recording", "Transcript")
     $InvalidPattern = "[^\s\w]+"
@@ -31,20 +34,22 @@ function Export-TeamsLiveEvents {
             ExportedResourcePath       = ""
         }
         if ($DownloadResources) {
-            Write-Host "Getting Resources for event " -NoNewline
+            $InfoMessage = "Getting Resources for event "
             $EventFolder = if (![string]::IsNullOrEmpty($EventReport.Subject)) {
-                Write-Host $EventReport.Subject
+                $InfoMessage += $EventReport.Subject
                 $EventReport.Subject
             }
             else {
                 $Start = if ($null -eq $EventReport.ScheduledStart) {
                     $null
-                } else {
+                }
+                else {
                     $EventReport.ScheduledStart.ToString('u')
                 }
-                Write-Host "organized by" $EventReport.Organizer "on" $Start
+                $InfoMessage += @("organized by", $EventReport.Organizer, "on", $Start) -join " "
                 @($EventReport.Organizer, $Start) -join "_"
             }
+            Write-Information -MessageData $InfoMessage
             $EventFolder = $EventFolder -replace $InvalidPattern, '_'
             if ($EventFolder.Length -gt 50) {
                 $EventFolder = $EventFolder.Substring(0, 50)
@@ -66,7 +71,8 @@ function Export-TeamsLiveEvents {
             $EventReport.ExportedResourcePath = $EventPath
             $Expired = if ($null -ne $Event.extensionData.broadcastResources.Expiry) {
                 [datetime]::Now -ge [datetime]$Event.extensionData.broadcastResources.Expiry
-            } else {
+            }
+            else {
                 $false
             }
             if (!$Event.extensionData.broadcastResources.IsDeleted -and !$Expired) {
@@ -98,20 +104,19 @@ function Export-TeamsLiveEvents {
         $ReportAppend += "_" + ($OrganizerId -replace $InvalidPattern, '_')
     }
     $SummaryPath = [IO.Path]::Combine($Path, "TeamsLiveEventReport_${ReportAppend}.csv")
-    
     if ((Test-Path -Path $SummaryPath)) {
         $iterator = 0
         $ReportAppend += ("_{0:D2}" -f $iterator)
         do {
             $iterator++
             $ReportAppend = $ReportAppend.Substring(0, $ReportAppend.Length - 2) + ("{0:D2}" -f $iterator)
-            $SummaryPath = [IO.Path]::Combine($Path, "TeamsLiveEventReport_${ReportAppend}.csv") 
+            $SummaryPath = [IO.Path]::Combine($Path, "TeamsLiveEventReport_${ReportAppend}.csv")
             $PathInUse = Test-Path -Path $SummaryPath
         } while ($PathInUse)
     }
     $Reports = $Reports | Where-Object { $null -ne $_ }
     if ($Reports.Count -gt 0) {
         $Reports | Export-Csv -Path $SummaryPath -NoTypeInformation
-        Write-Host "Report Summary saved to $SummaryPath"
+        Write-Information -MessageData "Report Summary saved to $SummaryPath"
     }
 }

@@ -3,6 +3,7 @@ function Get-CsOnlineUserObjectId {
     param (
         $Identity
     )
+
     $IdGuid = [Guid]::Empty
     if ($null -ne $Identity.MemberId) {
         $Identity = $Identity.MemberId
@@ -11,7 +12,7 @@ function Get-CsOnlineUserObjectId {
         $Identity = $IdGuid.Guid
     }
     else {
-        Write-Verbose "Looking up ObjectId for $Identity"
+        Write-Verbose -Message "Looking up ObjectId for $Identity"
         $User = Get-CsOnlineUser -Identity $Identity -ErrorAction Stop
         $Identity = $User.ObjectId.Guid
         if ($null -eq $Identity) {
@@ -20,3 +21,4 @@ function Get-CsOnlineUserObjectId {
     }
     $Identity
 }
+

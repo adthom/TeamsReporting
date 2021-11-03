@@ -43,6 +43,7 @@ function Get-TASReport {
         [switch]
         $Paginated
     )
+
     $ReportParams = Get-TASReportParameters -Key $Key
     $LastAvailable = [datetime]$ReportParams.LatestDate
     $Route = $Route.Trim().TrimEnd('?')
@@ -85,13 +86,13 @@ function Get-TASReport {
     }
     do {
         if ($null -ne $QueryHash['nextCursor']) {
-            Write-Host "Getting next $($QueryHash['pageSize']) results..." -ForegroundColor DarkGray
+            Write-Information -MessageData "Getting next $($QueryHash['pageSize']) results..."
         }
         $Response = Invoke-TASMethod -Route $Route -QueryHash $QueryHash -Method Get
         if ($Response) {
             $ErrorCode = $Response.errorCode
             if ($ErrorCode) {
-                Write-Warning "Response contained errors! ErrorCode: $ErrorCode"
+                Write-Warning -Message "Response contained errors! ErrorCode: $ErrorCode"
             }
             else {
                 $TenantId = $Response.id
@@ -103,7 +104,7 @@ function Get-TASReport {
                         $TotalCount = 1
                     }
                     $Summary = "Found {0} result{1} between {2:yyyy-MM-dd} and {3:yyyy-MM-dd}" -f $TotalCount, "$(if ($TotalCount -gt 1) {'s'})", $StartDate, $EndDate
-                    Write-Host $Summary -ForegroundColor Green
+                    Write-Information -MessageData $Summary
                 }
                 $Result = [System.Collections.Specialized.OrderedDictionary]::new()
                 foreach ($User in $Response.users) {
@@ -180,9 +181,11 @@ function Get-TASReport {
             }
             if ($null -ne $Response.paging) {
                 $QueryHash['nextCursor'] = $Response.paging.nextCursor
-            } else {
+            }
+            else {
                 $QueryHash['nextCursor'] = $null
             }
         }
     } while ($null -ne $QueryHash['nextCursor'])
 }
+

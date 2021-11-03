@@ -9,7 +9,8 @@ $DisclaimerPath = Join-Path -Path $RootFolder -ChildPath "modules\${SourceModule
 $DisclaimerLength = @(Get-Content -Path $DisclaimerPath).Count
 if ($null -ne $DisclaimerLength -and $DisclaimerLength -gt 0) {
     $DisclaimerLength++
-} else {
+}
+else {
     $DisclaimerLength = 0
 }
 

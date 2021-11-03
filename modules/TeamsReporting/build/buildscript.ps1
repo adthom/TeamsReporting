@@ -8,42 +8,6 @@ function FixSpacing ($inputString) {
     $trimmedLines -join [Environment]::NewLine
 }
 
-function FindMatchingStrings {
-    param (
-        $Content,
-        $OpenString,
-        $CloseString
-    )
-    $lContent = $Content
-    if (($openIndex = $lContent.IndexOf($OpenString)) -ge 0) {
-        $cursor = 1
-        $nextopen = $openIndex
-        $stringBuilder = [Text.StringBuilder]::new()
-        $stringBuilder.Append($lContent.Substring($openIndex, $OpenString.Length)) | Out-Null
-        $sub = $lContent.Substring($nextopen)
-        $offset = 0
-        do {
-            if ($nextopen -ge 0) {
-                $start = $nextopen + $OpenString.Length
-            } else {
-                $start = 0
-            }
-            $sub = $sub.Substring($start)
-            $nextclose = $sub.IndexOf($CloseString)
-            $nextopen = $sub.IndexOf($OpenString)
-            $offset = $start + $offset
-            if ($nextclose -lt $nextopen -or $nextopen -lt 0) {
-                $cursor--
-                $nextopen = $nextclose
-            } else {
-                $cursor++
-            }
-        } while ($cursor -gt 0)
-        $toRemove = $sub.Substring($nextclose + $CloseString.Length)
-        $Content.Replace($toRemove, "").Trim()
-    }
-}
-
 $Disclaimer = @(Get-Content -Path "${PSScriptRoot}\disclaimer.txt" | ForEach-Object { "# {0}" -f $_ }) -join "$([Environment]::NewLine)"
 
 # Get Project Root Folder
@@ -52,19 +16,13 @@ $ProjectRoot = Split-Path -Path $PSScriptRoot -Parent
 # Setup Path/File Variables for use in build
 $srcPath = [IO.Path]::Combine($ProjectRoot, "src")
 $releasePath = [IO.Path]::Combine($ProjectRoot, "release", "Scripts")
+$PSScriptAnalyzerSettings = "${ProjectRoot}\PSScriptAnalyzer.psd1"
 
 # Get Module Name from Project Folder Name
 $ModuleName = Split-Path -Path $ProjectRoot -Leaf
 
 $srcModuleManifest = "${srcPath}\${ModuleName}.psd1"
-$ModuleManifestString = (Get-Content -Path $srcModuleManifest | 
-    Where-Object { $_ -notmatch '^\s*#' } | 
-    ForEach-Object { $_ -replace '#.+$', '' } | 
-    Where-Object { $_ -ne [string]::Empty }
-) -join [Environment]::NewLine
-if ( -not [string]::IsNullOrWhiteSpace($ModuleManifestString) ) {
-    $ModuleManifest = Invoke-Expression -Command $ModuleManifestString
-}
+$ModuleManifest = Import-PowerShellDataFile $srcModuleManifest
 
 $RequiredModules = [Text.StringBuilder]::new()
 if ($null -ne $ModuleManifest['RequiredModules']) {
@@ -84,6 +42,7 @@ if ($null -ne $ModuleManifest['RequiredModules']) {
         $i++
     }
 }
+$RequiredModulesText = $RequiredModules.ToString()
 
 # Import all functions into current session
 $Privates = Get-ChildItem -Path ([IO.Path]::Combine($srcPath, "private")) -Filter *.ps1 -File
@@ -91,19 +50,24 @@ $Publics = Get-ChildItem -Path ([IO.Path]::Combine($srcPath, "public")) -Filter 
 foreach ($import in @($Publics + $Privates)) {
     try {
         . $import.FullName
-    } catch {
+    }
+    catch {
         Write-Error -Message "Failed to import function $($import.fullname): $_"
     }
 }
 
 # import getUsedLocalFunctions function
-$GetUsedLocalFunc = Get-ChildItem -Path Function:GetUsedLocalFunctions -ErrorAction SilentlyContinue
-if ($null -eq $GetUsedLocalFunc) {
-    . "${PSScriptRoot}\GetUsedLocalFunctions.ps1"
+$GetUsedLocalFunctionsPath = "${PSScriptRoot}\GetUsedLocalFunctions.ps1"
+if ((Test-Path -Path $GetUsedLocalFunctionsPath)) {
+    . $GetUsedLocalFunctionsPath
+}
+$GetUsedLocalFunctions = Get-ChildItem -Path Function:GetUsedLocalFunctions -ErrorAction SilentlyContinue
+if ($null -eq $GetUsedLocalFunctions) {
+    Write-Error "Required function GetUsedLocalFunctions cannot be found!"
 }
 
-# cleanup old builds
-Get-ChildItem -Path $releasePath -Filter *.ps1 | Remove-Item -Force -ErrorAction SilentlyContinue
+# cleanup removed old builds
+Get-ChildItem -Path $releasePath -Filter *.ps1 | Where-Object { $_ -notin $Publics } | Remove-Item -Force -ErrorAction SilentlyContinue
 
 foreach ($file in $Publics) {
     $FunctionName = [IO.Path]::GetFileNameWithoutExtension($file.Name)
@@ -112,47 +76,95 @@ foreach ($file in $Publics) {
     if ($null -eq $ScriptBlock) {
         Write-Warning "$FunctionName has no scriptblock!"
         continue
-    } else {
+    }
+    else {
         Write-Host "Building Script for $FunctionName"
     }
     $UsedFunctionStrings = GetUsedLocalFunctions -Script $ScriptBlock -Functions $null -GetStrings $true
 
-    $content = $Function.Definition
-    
-    $helpText = FindMatchingStrings -OpenString "<#" -CloseString "#>" -Content $content
-    if (![string]::IsNullOrEmpty($helpText)) {
-        $modifiedContent = $content.Replace($helpText, "").Trim()
-        $helpText = $helpText.Trim()
-    } else {
-        $helpText = ""
-        $modifiedContent = $content.Trim()
+    $FunctionDefinitionPredicate = {
+        param([System.Management.Automation.Language.Ast]$Ast)
+        $returnValue = $false
+        if ($Ast -is [System.Management.Automation.Language.FunctionDefinitionAst]) {
+            $returnValue = $true
+        }
+        $returnValue
+    }
+    $functionDefinition = $Function.ScriptBlock.Ast.Find($FunctionDefinitionPredicate, $true)
+    if ($null -eq $functionDefinition) {
+        Write-Warning "$FunctionName is not a valid PowerShell function! Skipping..."
+        continue
     }
 
-    if (($first = $modifiedContent.ToLower().IndexOf('[cmdletbinding')) -ge 0) {
-        $sub = $modifiedContent.Substring($first)
-        $CmdletBindingText = FindMatchingStrings -Content $sub -OpenString "[" -CloseString "]"
-        $modifiedContent = $modifiedContent.Replace($CmdletBindingText, "").Trim()
-        $CmdletBindingText = $CmdletBindingText.Trim()
-    } else {
+    if ($null -ne $helpAst) {
+        $helpContent = $helpAst.GetHelpContent()
+    }
+    if ($null -ne $helpContent) {
+        $helpCommentBlock = $helpContent.GetCommentBlock()
+    }
+    if (![string]::IsNullOrEmpty($helpCommentBlock)) {
+        $helpText = $helpCommentBlock.Trim()
+    }
+    else {
+        $helpText = ""
+    }
+
+    $CmdletBindingPredicate = {
+        param([System.Management.Automation.Language.Ast]$Ast)
+        $returnValue = $false
+        if ($Ast -is [System.Management.Automation.Language.AttributeAst]) {
+            $attribAst = [System.Management.Automation.Language.AttributeAst]$Ast
+            if ($attribAst.TypeName.FullName -eq 'CmdletBinding') {
+                $returnValue = $true
+            }
+        }
+        $returnValue
+    }
+    $cmdletBindingDefinition = $Function.ScriptBlock.Ast.Find($CmdletBindingPredicate, $true)
+    if ($null -ne $cmdletBindingDefinition) {
+        $CmdletBindingText = $cmdletBindingDefinition.Extent.Text.Trim()
+    }
+    else {
         $CmdletBindingText = ""
     }
-    
-    if (($first = $modifiedContent.ToLower().IndexOf('param')) -ge 0) {
-        $first = $first + 5
-        $sub = $modifiedContent.Substring($first)
-        $params = FindMatchingStrings -Content $sub -OpenString "(" -CloseString ")"
-        $paramPattern = "param\s*" + [Regex]::Escape($params)
-        if ($modifiedContent -match $paramPattern) {
-            $params = $Matches[0]
-            $modifiedContent = $modifiedContent.Replace($params, "").Trim()
-        } else {
-            Write-Warning "$params does not match $modifiedContent"
+
+    $ParamBlockPredicate = {
+        param([System.Management.Automation.Language.Ast]$Ast)
+        $returnValue = $false
+        if ($Ast -is [System.Management.Automation.Language.ParamBlockAst]) {
+            $returnValue = $true
         }
-    } else {
+        $returnValue
+    }
+    $paramBlockDefinition = $Function.ScriptBlock.Ast.Find($ParamBlockPredicate, $true)
+    if ($null -ne $paramBlockDefinition) {
+        $params = $paramBlockDefinition.Extent.Text.Trim()
+    }
+    else {
         $params = ""
     }
 
-    $functionText = $modifiedContent.Trim()
+    $NamedBlockPredicate = {
+        param([System.Management.Automation.Language.Ast]$Ast)
+        $returnValue = $false
+        if ($Ast -is [System.Management.Automation.Language.NamedBlockAst]) {
+            $returnValue = $true
+        }
+        $returnValue
+    }
+    $namedBlockDefinitions = @($Function.ScriptBlock.Ast.FindAll($NamedBlockPredicate, $true) | Where-Object { $_.Parent.Parent -eq $Function.ScriptBlock.Ast })
+    
+    $Content = [System.Text.StringBuilder]::new()
+    foreach ($namedBlock in $namedBlockDefinitions) {
+        foreach ($statement in $namedBlock.Statements) {
+            $blockText = FixSpacing $statement.Extent.Text.Trim()
+            if (![string]::IsNullOrEmpty($blockText)) {
+                $Content.AppendLine($blockText) | Out-Null
+                $Content.AppendLine() | Out-Null
+            }
+        }
+    }
+    $functionText = $Content.ToString().Trim()
 
     if (![string]::IsNullOrEmpty($helpText)) {
         $helpText = FixSpacing $helpText
@@ -162,37 +174,61 @@ foreach ($file in $Publics) {
     }
     $functionText = FixSpacing $functionText
 
-    # merge strings to $compiledScript
-    $scriptArray = @()
+    $scriptSB = [System.Text.StringBuilder]::new()
     if (![string]::IsNullOrEmpty($Disclaimer)) {
-        $scriptArray += $Disclaimer
+        $scriptSB.AppendLine($Disclaimer) | Out-Null
+        $scriptSB.AppendLine() | Out-Null
     }
-    if (![string]::IsNullOrEmpty($RequiredModules.ToString())) {
-        $scriptArray += $RequiredModules.ToString()
+    if (![string]::IsNullOrEmpty($RequiredModulesText)) {
+        $scriptSB.AppendLine($RequiredModulesText) | Out-Null
+        $scriptSB.AppendLine() | Out-Null
     }
     if (![string]::IsNullOrEmpty($helpText)) {
-        $scriptArray += $helpText
+        $scriptSB.AppendLine($helpText) | Out-Null
+        $scriptSB.AppendLine() | Out-Null
     }
     if (![string]::IsNullOrEmpty($CmdletBindingText)) {
-        $scriptArray += $CmdletBindingText
+        $scriptSB.AppendLine($CmdletBindingText) | Out-Null
+        $scriptSB.AppendLine() | Out-Null
     }
     if (![string]::IsNullOrEmpty($params)) {
-        $scriptArray += $params
+        $scriptSB.AppendLine($params) | Out-Null
+        $scriptSB.AppendLine() | Out-Null
     }
     if (![string]::IsNullOrEmpty($UsedFunctionStrings)) {
-        $scriptArray += $UsedFunctionStrings
+        foreach ($UsedFunction in $UsedFunctionStrings) {
+            $scriptSB.AppendLine($UsedFunction) | Out-Null
+            $scriptSB.AppendLine() | Out-Null
+        }
     }
     if (![string]::IsNullOrEmpty($functionText)) {
-        $scriptArray += $functionText
+        $scriptSB.AppendLine($functionText.Trim()) | Out-Null
     }
-    $compiledScript = $scriptArray -join "$([Environment]::NewLine)$([Environment]::NewLine)"
+    $compiledScript = $scriptSB.ToString()
+
     $nlr = [Regex]::Escape([Environment]::NewLine)
     $compiledScript = $compiledScript -replace "$nlr{3,}", "$([Environment]::NewLine)$([Environment]::NewLine)"
+    $compiledScript = Invoke-Formatter -ScriptDefinition $compiledScript -Settings $PSScriptAnalyzerSettings
 
-    if (!(Test-Path -Path $releasePath)) {
-        New-Item -Path $releasePath -ItemType Directory | Out-Null
+    New-Variable -Name tokens -Force | Out-Null
+    New-Variable -Name errors -Force | Out-Null
+    [System.Management.Automation.Language.Parser]::ParseInput($compiledScript, [ref]$tokens, [ref]$errors) | Out-Null
+    if ($errors.Count -eq 0) {
+        $Issues = Invoke-ScriptAnalyzer -ScriptDefinition $compiledScript -Settings $PSScriptAnalyzerSettings
+        if ($Issues.Count -gt 0) {
+            Write-Warning -Message "Found $($Issues.Count) issues in $($srcFile.BaseName)"
+        }
+        if (!(Test-Path -Path $releasePath)) {
+            New-Item -Path $releasePath -ItemType Directory | Out-Null
+        }
+        Set-Content -Path ([IO.Path]::Combine($releasePath, $file.Name)) -Value $compiledScript
     }
-    Set-Content -Path ([IO.Path]::Combine($releasePath, $file.Name)) -Value $compiledScript
+    else {
+        Write-Warning "$FunctionName compiled with warnings!, not saving file"
+        foreach ($e in $errors) {
+            Write-Warning "$($e.ErrorId): $($e.Message) - $($e.Extent.Text)"
+        }
+    }
 }
 
 # create Zip Package

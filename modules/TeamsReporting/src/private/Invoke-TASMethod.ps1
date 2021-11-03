@@ -9,6 +9,7 @@ function Invoke-TASMethod {
 
         $Method = "Get"
     )
+
     $Token = Get-TASToken
     $Route = $Route.Trim().TrimStart('/')
     $Uri = "https://tas.teams.microsoft.com/v2/${Route}"
@@ -17,7 +18,7 @@ function Invoke-TASMethod {
         $Uri += "?" + $QueryString
     }
     try {
-        Write-Verbose "URI: $Uri"
+        Write-Verbose -Message "URI: $Uri"
         $Result = Invoke-RestMethod -Method $Method -Headers @{ 'Authorization' = "Bearer $($Token.AccessToken)" } -Uri $Uri -ErrorAction Stop
     }
     catch {
@@ -46,3 +47,4 @@ function Invoke-TASMethod {
     }
     $Result
 }
+

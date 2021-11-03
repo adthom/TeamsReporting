@@ -8,13 +8,16 @@ function Get-TeamsUserActivity {
         [switch]
         $IncludeDaily
     )
+
     $Key = "UAR_T"
     $Route = "/users/summary-timeseries"
     $PSBoundParameters['TimePeriod'] = $TimePeriod
     $Results = Get-TASReport -Key $Key -Route $Route -Paginated @PSBoundParameters
     if ($IncludeDaily) {
         $Results | Sort-Object -Property DisplayName, Date
-    } else {
+    }
+    else {
         $Results
     }
 }
+

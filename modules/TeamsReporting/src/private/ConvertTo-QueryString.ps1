@@ -5,10 +5,11 @@ function ConvertTo-QueryString {
         [hashtable]
         $QueryHash
     )
+
     $TempList = [System.Collections.Generic.List[string]]::new()
     foreach ( $Query in $QueryHash.Keys ) {
         $ValueString = $QueryHash[$Query] -join ','
-        $TempList.Add(('{0}={1}' -f $Query, [Web.HttpUtility]::UrlEncode($ValueString))) | Out-Null
+        $TempList.Add(('{0}={1}' -f $Query, [System.Web.HttpUtility]::UrlEncode($ValueString))) | Out-Null
     }
     $queryString = $TempList -join '&'
     $queryString
