@@ -11,7 +11,7 @@
     RootModule           = 'TeamsReporting.psm1'
 
     # Version number of this module.
-    ModuleVersion        = '0.1.21307.1'
+    ModuleVersion        = '0.1.21307.2'
 
     # Supported PSEditions
     CompatiblePSEditions = 'Desktop', 'Core'

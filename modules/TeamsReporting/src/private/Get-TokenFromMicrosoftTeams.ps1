@@ -16,12 +16,16 @@ function Get-TokenFromMicrosoftTeams {
     }
     $LoginHint = [Microsoft.TeamsCmdlets.Powershell.Connect.Models.AzureRmProfileProvider]::Instance.Profile.Context.Account.Id
     try {
-        $Token = $Application.AcquireTokenSilent($Scopes, $LoginHint).ExecuteAsync().Result
+        $TokenTask = $Application.AcquireTokenSilent($Scopes, $LoginHint).ExecuteAsync()
+        $TokenTask.Wait()
+        $Token = $TokenTask.Result
     }
     catch {
         Write-Verbose -Message "Could not acquire token silently, acquiring without prompt"
         $MSALPrompt = [Microsoft.Identity.Client.Prompt, Microsoft.Identity.Client, Version = 4.29.0.0, Culture = neutral, PublicKeyToken = 0a613f4dd989e8ae]::NoPrompt
-        $Token = $Application.AcquireTokenInteractive($Scopes).WithLoginHint($LoginHint).WithPrompt($MSALPrompt).ExecuteAsync().Result
+        $TokenTask = $Application.AcquireTokenInteractive($Scopes).WithLoginHint($LoginHint).WithPrompt($MSALPrompt).ExecuteAsync()
+        $TokenTask.Wait()
+        $Token = $TokenTask.Result
     }
     $Token
 }
