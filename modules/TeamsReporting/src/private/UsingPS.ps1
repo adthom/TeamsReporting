@@ -1,12 +1,13 @@
 function UsingPS {
+    [CmdletBinding()]
     param (
         [IDisposable]
         $Disposable,
-        
-        [ScriptBlock] 
+
+        [ScriptBlock]
         $scriptBlock
     )
- 
+
     try {
         & $scriptBlock
     }
@@ -14,9 +15,11 @@ function UsingPS {
         if ($null -ne $Disposable) {
             if ($null -eq $Disposable.PSBase) {
                 $Disposable.Dispose()
-            } else {
+            }
+            else {
                 $Disposable.PSBase.Dispose()
             }
         }
     }
 }
+

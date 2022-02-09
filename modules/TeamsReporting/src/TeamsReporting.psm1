@@ -9,8 +9,9 @@ $Private = @( Get-ChildItem -Path $PSScriptRoot\Private\*.ps1 -ErrorAction Silen
 foreach ($import in @($Public + $Private)) {
     try {
         . $import.FullName
-    } catch {
-        Write-Error -Message "Failed to import function $($import.fullname): $_"
+    }
+    catch {
+        Write-Error -Message "Failed to import function $($import.FullName): $_"
     }
 }
 
@@ -19,4 +20,4 @@ foreach ($import in @($Public + $Private)) {
 # Export Public functions ($Public.BaseName) for WIP modules
 # Set variables visible to the module and its functions only
 
-Export-ModuleMember -Function @($Public.BaseName + $Private.BaseName) -Variable WebSession
+Export-ModuleMember -Function @($Public.BaseName + $Private.BaseName)

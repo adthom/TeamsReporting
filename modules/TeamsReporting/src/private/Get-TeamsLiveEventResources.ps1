@@ -1,10 +1,14 @@
 function Get-TeamsLiveEventResources {
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSReviewUnusedParameter", "Path")]
+    [CmdletBinding()]
     param (
         $BroadcastResources,
         [ValidateSet("QnaReport", "AttendeeReport", "Recording", "AltRecording", "Transcript", "DeleteAll", "RestoreAll")]
         $Resource = "AttendeeReport",
+
         $Path = $PWD
     )
+
     if ($BroadcastResources -is [string]) {
         $BroadcastResources = $BroadcastResources | ConvertFrom-Json
     }
@@ -58,8 +62,7 @@ function Get-TeamsLiveEventResources {
     foreach ($u in $Urls) {
         $OneTimeUrl = Get-TeamsLiveEventReport -LiveEventType attendee -LiveEventServiceUrl $u
         if ($Download -and ![string]::IsNullOrEmpty($OneTimeUrl.resourceUrl)) {
-
-            UsingPS ($httpClient = [Net.Http.HttpClient]::new()) {
+            UsingPS ($httpClient = [System.Net.Http.HttpClient]::new()) {
                 $getTask = $httpClient.GetAsync($OneTimeUrl.resourceUrl)
                 $getTask.Wait()
                 $response = $getTask.Result.EnsureSuccessStatusCode()
@@ -76,3 +79,4 @@ function Get-TeamsLiveEventResources {
         }
     }
 }
+

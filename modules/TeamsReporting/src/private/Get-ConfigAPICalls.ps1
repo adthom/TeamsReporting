@@ -1,22 +1,24 @@
 function Get-ConfigAPICalls {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [ValidateSet("PstnCalls", "DirectRouting", "PstnCallGraph", "DirectRoutingGraph")]
         [string]
         $Endpoint,
-        
+
         [DateTime]
         $StartDate,
-        
+
         [DateTime]
         $EndDate,
-        
+
         [int]
         $PageSize = 100,
-        
+
         [int]
         $Skip = 0
     )
+
     do {
         $Uri = "https://api.interfaces.records.teams.microsoft.com/Skype.Analytics/${Endpoint}"
         $Uri += "?`$top=${PageSize}"
@@ -42,12 +44,11 @@ function Get-ConfigAPICalls {
         foreach ($r in $Result.value) {
             $r
         }
-
         if ($Result.'@odata.count' -gt $Skip -and $Result.value.Count -eq $PageSize) {
             $Remaining = ($Skip / $Result.'@odata.count') * 100
             Write-Progress -Activity "Getting Results from $Endpoint" -PercentComplete $Remaining -CurrentOperation "$Skip of $($Result.'@odata.count') completed"
         }
     } while ($Result.'@odata.count' -gt $Skip -and $Result.value.Count -eq $PageSize)
-    
     Write-Progress -Activity "Getting Results from $Endpoint" -PercentComplete 100 -Completed
 }
+

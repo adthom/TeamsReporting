@@ -1,8 +1,11 @@
 function ConvertFrom-Content {
+    [CmdletBinding()]
     param (
         $Content,
+
         $MediaType
     )
+
     if ($Content -is [System.Net.Http.StreamContent]) {
         $Content = $Content.ReadAsStringAsync().Result
     }
@@ -13,3 +16,4 @@ function ConvertFrom-Content {
         $Content
     }
 }
+

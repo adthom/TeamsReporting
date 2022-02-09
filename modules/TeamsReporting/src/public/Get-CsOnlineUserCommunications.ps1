@@ -1,4 +1,5 @@
 function Get-CsOnlineUserCommunications {
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         $Identity,
@@ -6,10 +7,11 @@ function Get-CsOnlineUserCommunications {
         [int]
         $Top = 500,
 
-        [ValidateSet("Call","Conference", IgnoreCase = $false)]
+        [ValidateSet("Call", "Conference", IgnoreCase = $false)]
         [string]
         $CallType
     )
+
     $Identity = Get-CsOnlineUserObjectId -Identity $Identity
     $Select = @(
         "userId"
@@ -34,3 +36,4 @@ function Get-CsOnlineUserCommunications {
         $r
     }
 }
+

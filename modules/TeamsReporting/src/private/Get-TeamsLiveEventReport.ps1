@@ -1,13 +1,19 @@
 function Get-TeamsLiveEventReport {
+    [CmdletBinding()]
     param (
         $LiveEventType = "scheduling",
+
         $LiveEventServiceUrl = "https://scheduler.teams.microsoft.com/teams/v1/meetings/daterange/{0}",
+
         [datetime]
         $StartTime,
+
         [datetime]
         $EndTime,
+
         $OrganizerId
     )
+
     $Token = Get-TAGSToken
     $Uri = "https://tags.teams.microsoft.com/api/v1/liveeventservice"
     $BodyObject = @{
@@ -21,7 +27,6 @@ function Get-TeamsLiveEventReport {
         $BodyObject['endTime'] = $EndTime.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss.fffK')
     }
     $BodyObject['organizerId'] = if ($OrganizerId) { $OrganizerId } else { [string]::Empty }
-
     $Body = $BodyObject | ConvertTo-Json -Compress
     try {
         $Headers = @{
@@ -51,7 +56,7 @@ function Get-TeamsLiveEventReport {
                 if (![string]::IsNullOrEmpty($result.extensionData.broadcastResources)) {
                     $broadcastResources = $result.extensionData.broadcastResources | ConvertFrom-Json -ErrorAction SilentlyContinue
                     if ($null -ne $broadcastResources) {
-                        $result.extensionData.broadcastResources = $broadcastResources 
+                        $result.extensionData.broadcastResources = $broadcastResources
                     }
                 }
                 $result
@@ -65,3 +70,4 @@ function Get-TeamsLiveEventReport {
         $Response
     }
 }
+
