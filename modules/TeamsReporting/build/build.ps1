@@ -108,6 +108,7 @@ AnalyzePSFile -Path $srcModuleManifest -PSScriptAnalyzerSettings $PSScriptAnalyz
 #Get public and private function definition files.
 $Public = @( Get-ChildItem -Path $srcPath\Public\*.ps1 -ErrorAction SilentlyContinue )
 $Private = @( Get-ChildItem -Path $srcPath\Private\*.ps1 -ErrorAction SilentlyContinue )
+$FunctionsToExport = $Public.BaseName
 
 $NewModuleManifestParams = @{
     Path              = $moduleManifestFile
@@ -203,11 +204,16 @@ $Public = @( Get-ChildItem -Path $releasePath\Public\*.ps1 -ErrorAction Silently
 $Private = @( Get-ChildItem -Path $releasePath\Private\*.ps1 -ErrorAction SilentlyContinue )
 
 $replacePattern = $releasePath -replace '\\', '\\'
-foreach ($import in @($Public)) {
+foreach ($import in @($Private + $Public)) {
     # add the dot source for all discovered PS1 files to our psm1
     $PS1Path = $import.FullName -replace $replacePattern, ''
     Add-Content -Path $moduleFile -Value ". `"`$PSScriptRoot${PS1Path}`""
 }
+if (![string]::IsNullOrWhiteSpace(($AdditionalModuleChecks = Get-Content -Path "${PSScriptRoot}\modulechecks.ps1" -ErrorAction SilentlyContinue))) {
+    Add-Content -Path $moduleFile -Value ""
+    Add-Content -Path $moduleFile -Value $AdditionalModuleChecks
+}
+
 AnalyzePSFile -Path $moduleFile -PSScriptAnalyzerSettings $PSScriptAnalyzerSettings
 
 # Create new module manifest with our inputs
