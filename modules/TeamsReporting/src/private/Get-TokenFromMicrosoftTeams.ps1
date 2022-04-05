@@ -12,6 +12,14 @@ function Get-TokenFromMicrosoftTeams {
         $Application = $null
     }
     if ($null -eq $Application) {
+        try {
+            $Application = [Microsoft.TeamsCmdlets.Powershell.Connect.TeamsPowerShellSession]::SessionProvider.PublicClientApplication
+        }
+        catch {
+            $Application = $null
+        }
+    }
+    if ($null -eq $Application) {
         Write-Error -Message "Run Connect-MicrosoftTeams before running cmdlets." -ErrorAction Stop
     }
     $LoginHint = [Microsoft.TeamsCmdlets.Powershell.Connect.Models.AzureRmProfileProvider]::Instance.Profile.Context.Account.Id
