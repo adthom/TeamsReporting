@@ -221,4 +221,4 @@ New-ModuleManifest @NewModuleManifestParams
 AnalyzePSFile -Path $moduleManifestFile -PSScriptAnalyzerSettings $PSScriptAnalyzerSettings
 
 $Files = Get-ChildItem -Path $releasePath | Select-Object -ExpandProperty FullName
-Compress-Archive -Path $Files -DestinationPath ([IO.Path]::Combine($zipPath, "Module.zip")) -CompressionLevel Optimal -Force
+Compress-Archive -Path $Files -DestinationPath ([IO.Path]::Combine($zipPath, "${ModuleName}.zip")) -CompressionLevel Optimal -Force
