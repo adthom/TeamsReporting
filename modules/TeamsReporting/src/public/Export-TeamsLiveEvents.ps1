@@ -19,6 +19,15 @@ function Export-TeamsLiveEvents {
     $LiveEvents = Get-TeamsLiveEventReport -StartTime $StartTime -EndTime $EndTime -OrganizerId $OrganizerId
     $Resources = @("QnaReport", "AttendeeReport", "Recording", "Transcript")
     $InvalidPattern = "[^\s\w]+"
+    if ($LiveEvents.Count -eq 100) {
+        if ($null -eq $StartTime) {
+            $StartTime = [DateTime]::MinValue
+        }
+        if ($null -eq $EndTime) {
+            $EndTime = [DateTime]::MaxValue
+        }
+        Write-Warning "100 items returned for period: $($StartTime.ToString('yyyy-MM-dd HH:mm:ss'))-$($EndTime.ToString('yyyy-MM-dd HH:mm:ss')), results could be truncated!"
+    }
     $Reports = foreach ($Event in $LiveEvents) {
         $EventReport = [PSCustomObject]@{
             Subject                    = $Event.subject
@@ -49,7 +58,7 @@ function Export-TeamsLiveEvents {
                 $InfoMessage += @("organized by", $EventReport.Organizer, "on", $Start) -join " "
                 @($EventReport.Organizer, $Start) -join "_"
             }
-            Write-Information -MessageData $InfoMessage
+            Write-Verbose -Message $InfoMessage
             $EventFolder = $EventFolder -replace $InvalidPattern, '_'
             if ($EventFolder.Length -gt 50) {
                 $EventFolder = $EventFolder.Substring(0, 50)
@@ -117,6 +126,7 @@ function Export-TeamsLiveEvents {
     $Reports = $Reports | Where-Object { $null -ne $_ }
     if ($Reports.Count -gt 0) {
         $Reports | Export-Csv -Path $SummaryPath -NoTypeInformation
-        Write-Information -MessageData "Report Summary saved to $SummaryPath"
+        Write-Verbose -Message "Report Summary saved to $SummaryPath"
+        return $SummaryPath
     }
 }

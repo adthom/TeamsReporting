@@ -1,6 +1,7 @@
 function Get-TeamsLiveEventReport {
     [CmdletBinding()]
     param (
+        [ValidateSet("scheduling","attendee")]
         $LiveEventType = "scheduling",
 
         $LiveEventServiceUrl = "https://scheduler.teams.microsoft.com/teams/v1/meetings/daterange/{0}",
