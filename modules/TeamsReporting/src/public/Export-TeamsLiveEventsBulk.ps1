@@ -3,7 +3,7 @@ function Export-TeamsLiveEventsBulk {
     param (
         [DateTime]
         $StartDate = [DateTime]::Now.Date.AddYears(-1),
-        
+
         [DateTime]
         $EndDate = [DateTime]::Now.Date.AddMonths(6),
 
@@ -38,3 +38,4 @@ function Export-TeamsLiveEventsBulk {
         }
     }
 }
+
